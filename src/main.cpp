@@ -1,6 +1,8 @@
 #include "App.h"
 #include "BackgroundWindowView.h"
 #include "BoardView.h"
+#include "FenUtils.h"
+#include "LoadedPositionInfo.h"
 #include "PieceView.h"
 #include <array>
 #include <chrono>
@@ -11,86 +13,7 @@
 
 #include "Piece.h"
 
-std::string startFen =
-  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-class LoadedPositionInfo
-{
-public:
-  LoadedPositionInfo() { cells.fill(0); }
-
-  std::array<int, 64> cells;
-  bool whiteToMove = true;
-  bool whiteCastleKingside = false;
-  bool whiteCastleQueenside = false;
-  bool blackCastleKingside = false;
-  bool blackCastleQueenside = false;
-};
-
-static LoadedPositionInfo PositionFromFen(std::string fen)
-{
-  if (fen.empty()) {
-    return LoadedPositionInfo();
-  }
-
-  LoadedPositionInfo loadedPositionInfo;
-  std::vector<std::string> sections;
-
-  std::istringstream ss(fen);
-  std::string token;
-
-  while (std::getline(ss, token, ' ')) {
-    sections.push_back(token);
-  }
-
-  int file = 0;
-  int rank = 7;
-
-  for (char symbol : sections.at(0)) {
-    if (symbol == '/') {
-      file = 0;
-      rank--;
-    } else {
-      if (isdigit(symbol)) {
-        file += symbol - '0';
-      } else {
-        int pieceColour =
-          (toupper(symbol) == symbol) ? Piece::White : Piece::Black;
-        int pieceType = Piece::GetPieceTypeFromSymbol(symbol);
-        loadedPositionInfo.cells[rank * 8ull + file] = pieceType | pieceColour;
-        file++;
-      }
-    }
-  }
-
-  loadedPositionInfo.whiteToMove = (sections.at(1) == "w");
-
-  std::string castlingRights = (sections.size() > 2) ? sections.at(2) : "KQkq";
-  loadedPositionInfo.whiteCastleKingside =
-    castlingRights.find_first_of("K") != std::string::npos;
-  loadedPositionInfo.whiteCastleQueenside =
-    castlingRights.find_first_of("Q") != std::string::npos;
-  loadedPositionInfo.blackCastleKingside =
-    castlingRights.find_first_of("k") != std::string::npos;
-  loadedPositionInfo.blackCastleQueenside =
-    castlingRights.find_first_of("q") != std::string::npos;
-
-  /*if (sections.size() > 3) {
-    std::string enPassantFileName;
-
-    enPassantFileName.push_back(sections[3][0]);
-    if (BoardRepresentation.fileNames.Contains(enPassantFileName)) {
-      loadedPositionInfo.epFile =
-        BoardRepresentation.fileNames.IndexOf(enPassantFileName) + 1;
-    }
-  }
-
-  // Half-move clock
-  if (sections.Length > 4) {
-    int.TryParse(sections[4], out loadedPositionInfo.plyCount);
-  }*/
-  return loadedPositionInfo;
-}
+std::set<int> moveOffsets = { -9, -8, -7, 1, 9, 8, 7, -1 };
 
 class UpdateHandler : public IUpdateHandler
 {
@@ -100,12 +23,9 @@ public:
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     BackgroundWindowView::BeginWindow();
-    BoardView::BeginBoard();
+    BoardView::BeginBoard(paintedCellIds, targetedCellIds);
 
-    startFen =
-      "rnbqkb1r/pp2pppp/3p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 2 5";
-
-    static auto pos = PositionFromFen(startFen);
+    static auto pos = FenUtils::PositionFromFen(FenUtils::StartFen);
 
     for (size_t i = 0; i < pos.cells.size(); ++i) {
       auto piece = pos.cells[i];
@@ -116,9 +36,35 @@ public:
       }
     }
 
+    int cellId = BoardView::GetClickedCell();
+    if (cellId != -1) {
+      if (pos.cells[cellId] & pos.colorToMove) {
+        if (paintedCellIds.count(cellId)) {
+          paintedCellIds.clear();
+        } else {
+          paintedCellIds.clear();
+          paintedCellIds.insert(cellId);
+        }
+      }
+    }
+
+    targetedCellIds.clear();
+    for (auto offset : moveOffsets) {
+      for (auto selected : paintedCellIds) {
+        int cellId = selected + offset;
+        if (cellId >= 0 && cellId <= 63) {
+          bool aggressive = !!pos.cells[cellId];
+          targetedCellIds[cellId] = aggressive;
+        }
+      }
+    }
+
     BoardView::EndBoard();
     BackgroundWindowView::EndWindow();
   }
+
+  std::set<int> paintedCellIds;
+  std::map<int, bool> targetedCellIds;
 };
 
 int main(int argc, char* argv[])
