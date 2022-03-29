@@ -29,6 +29,10 @@ public:
 
 static LoadedPositionInfo PositionFromFen(std::string fen)
 {
+  if (fen.empty()) {
+    return LoadedPositionInfo();
+  }
+
   LoadedPositionInfo loadedPositionInfo;
   std::vector<std::string> sections;
 
@@ -42,7 +46,7 @@ static LoadedPositionInfo PositionFromFen(std::string fen)
   int file = 0;
   int rank = 7;
 
-  for (char symbol : sections[0]) {
+  for (char symbol : sections.at(0)) {
     if (symbol == '/') {
       file = 0;
       rank--;
@@ -59,9 +63,9 @@ static LoadedPositionInfo PositionFromFen(std::string fen)
     }
   }
 
-  loadedPositionInfo.whiteToMove = (sections[1] == "w");
+  loadedPositionInfo.whiteToMove = (sections.at(1) == "w");
 
-  std::string castlingRights = (sections.size() > 2) ? sections[2] : "KQkq";
+  std::string castlingRights = (sections.size() > 2) ? sections.at(2) : "KQkq";
   loadedPositionInfo.whiteCastleKingside =
     castlingRights.find_first_of("K") != std::string::npos;
   loadedPositionInfo.whiteCastleQueenside =
@@ -98,7 +102,7 @@ public:
     BackgroundWindowView::BeginWindow();
     BoardView::BeginBoard();
 
-    static auto pos = PositionFromFen(startFen);
+    static auto pos = PositionFromFen("");
 
     for (size_t i = 0; i < pos.cells.size(); ++i) {
       auto piece = pos.cells[i];
