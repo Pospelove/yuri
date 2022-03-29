@@ -1,62 +1,113 @@
 #include "App.h"
-#include <iostream>
-
-#include "imgui.h"
-
-#include "lunasvg.h"
-
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_surface.h>
-#include <cmrc/cmrc.hpp>
-
-#include <glad/glad.h>
-
-#include <vector>
-
-CMRC_DECLARE(assets);
-
-class Handler : public IUpdateHandler
-{
-public:
-  lunasvg::Bitmap bitmap;
-  std::vector<uint8_t> png;
-  GLuint texture = 0;
-
-  Handler()
-  {
-    cmrc::file file = cmrc::assets::get_filesystem().open("assets/bN.svg");
-
-    std::string svg;
-    for (char ch : file) {
-      svg += ch;
-    }
-
-    auto document = lunasvg::Document::loadFromData(svg.data());
-    bitmap = document->renderToBitmap(128, 128);
-
-    if (!bitmap.valid()) {
-      throw std::runtime_error("renderToBitmap failed");
-    }
-  }
-};
-
-// ImGui::GetBackgroundDrawList()->AddImage((void*)texture, ImVec2(0, 0),
-// ImVec2(64, 64));
-
 #include "BackgroundWindowView.h"
 #include "BoardView.h"
 #include "PieceView.h"
+#include <array>
+#include <chrono>
+#include <iostream>
+#include <sstream>
+#include <thread>
+#include <vector>
+
+#include "Piece.h"
+
+std::string startFen =
+  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+class LoadedPositionInfo
+{
+public:
+  LoadedPositionInfo() { cells.fill(0); }
+
+  std::array<int, 64> cells;
+  bool whiteToMove = true;
+  bool whiteCastleKingside = false;
+  bool whiteCastleQueenside = false;
+  bool blackCastleKingside = false;
+  bool blackCastleQueenside = false;
+};
+
+static LoadedPositionInfo PositionFromFen(std::string fen)
+{
+  LoadedPositionInfo loadedPositionInfo;
+  std::vector<std::string> sections;
+
+  std::istringstream ss(fen);
+  std::string token;
+
+  while (std::getline(ss, token, ' ')) {
+    sections.push_back(token);
+  }
+
+  int file = 0;
+  int rank = 7;
+
+  for (char symbol : sections[0]) {
+    if (symbol == '/') {
+      file = 0;
+      rank--;
+    } else {
+      if (isdigit(symbol)) {
+        file += symbol;
+      } else {
+        int pieceColour =
+          (toupper(symbol) == symbol) ? Piece::White : Piece::Black;
+        int pieceType = Piece::GetPieceTypeFromSymbol(symbol);
+        loadedPositionInfo.cells[rank * 8ull + file] = pieceType | pieceColour;
+        file++;
+      }
+    }
+  }
+
+  loadedPositionInfo.whiteToMove = (sections[1] == "w");
+
+  std::string castlingRights = (sections.size() > 2) ? sections[2] : "KQkq";
+  loadedPositionInfo.whiteCastleKingside =
+    castlingRights.find_first_of("K") != std::string::npos;
+  loadedPositionInfo.whiteCastleQueenside =
+    castlingRights.find_first_of("Q") != std::string::npos;
+  loadedPositionInfo.blackCastleKingside =
+    castlingRights.find_first_of("k") != std::string::npos;
+  loadedPositionInfo.blackCastleQueenside =
+    castlingRights.find_first_of("q") != std::string::npos;
+
+  /*if (sections.size() > 3) {
+    std::string enPassantFileName;
+
+    enPassantFileName.push_back(sections[3][0]);
+    if (BoardRepresentation.fileNames.Contains(enPassantFileName)) {
+      loadedPositionInfo.epFile =
+        BoardRepresentation.fileNames.IndexOf(enPassantFileName) + 1;
+    }
+  }
+
+  // Half-move clock
+  if (sections.Length > 4) {
+    int.TryParse(sections[4], out loadedPositionInfo.plyCount);
+  }*/
+  return loadedPositionInfo;
+}
 
 class UpdateHandler : public IUpdateHandler
 {
 public:
   void Update() override
   {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
     BackgroundWindowView::BeginWindow();
     BoardView::BeginBoard();
 
-    PieceView::BeginPiece();
-    PieceView::EndPiece();
+    static auto pos = PositionFromFen(startFen);
+
+    for (size_t i = 0; i < pos.cells.size(); ++i) {
+      auto piece = pos.cells[i];
+      if (piece) {
+        auto p = BoardView::GetCellCursorPos(i);
+        PieceView::BeginPiece(piece, p);
+        PieceView::EndPiece();
+      }
+    }
 
     BoardView::EndBoard();
     BackgroundWindowView::EndWindow();

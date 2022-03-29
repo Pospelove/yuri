@@ -1,4 +1,5 @@
 #include "PieceView.h"
+#include "Piece.h"
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_surface.h>
 #include <cmrc/cmrc.hpp>
@@ -17,23 +18,39 @@ CMRC_DECLARE(assets);
 namespace {
 struct PieceViewData
 {
-  std::map<std::string, lunasvg::Bitmap> bitmaps;
-  std::map<std::string, GLuint> textures;
+  std::map<int, lunasvg::Bitmap> bitmaps;
+  std::map<int, GLuint> textures;
+  float lastCellSize = -1;
 };
 static PieceViewData g;
 }
 
-void PieceView::BeginPiece()
+void PieceView::BeginPiece(int piece, const ImVec2& cursorPos)
 {
+  float minWindowSize =
+    std::min(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
+  minWindowSize *= 0.8f;
+  auto cellSize = minWindowSize / 8;
+
+  if (cellSize != g.lastCellSize) {
+    g.lastCellSize = cellSize;
+    for (auto p : g.textures) {
+      glDeleteTextures(1, &p.second);
+    }
+    g.bitmaps.clear();
+    g.textures.clear();
+  }
 
   PreparePieceBitmaps();
-
   PreparePieceTextures();
+  auto texture = g.textures[piece];
 
-  auto texture = g.textures["assets/bB.svg"];
+  auto pos2 = cursorPos;
+  pos2.x += g.lastCellSize;
+  pos2.y += g.lastCellSize;
 
-  ImGui::GetBackgroundDrawList()->AddImage(reinterpret_cast<void*>(texture),
-                                           ImVec2(0, 0), ImVec2(64, 64));
+  ImGui::GetForegroundDrawList()->AddImage(reinterpret_cast<void*>(texture),
+                                           cursorPos, pos2);
 }
 
 void PieceView::EndPiece()
@@ -70,13 +87,13 @@ void PieceView::PreparePieceBitmaps()
     }
 
     auto document = lunasvg::Document::loadFromData(svg.data());
-    auto bitmap = document->renderToBitmap(128, 128);
+    auto bitmap = document->renderToBitmap(g.lastCellSize, g.lastCellSize);
 
     if (!bitmap.valid()) {
       throw std::runtime_error("renderToBitmap failed for " + piecePath);
     }
 
-    g.bitmaps[piecePath] = bitmap;
+    g.bitmaps[TexturePathToPieceCode(piecePath.data())] = bitmap;
   }
 }
 
@@ -154,4 +171,24 @@ unsigned int PieceView::SurfaceToTexture(void* surface_)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   return texture;
+}
+
+int PieceView::TexturePathToPieceCode(const char* path)
+{
+  std::vector<char> buf;
+  buf.resize(std::strlen(path) + 1, 0);
+  std::strcpy(buf.data(), path);
+
+  constexpr int removeChars = sizeof(".svg");
+  buf[std::strlen(path) - removeChars + 1] = 0;
+
+  std::string str(buf.data());
+  auto pieceUpper = str.back();
+  str.pop_back();
+  auto color = str.back();
+  str.clear();
+
+  int pieceType = Piece::GetPieceTypeFromSymbol(pieceUpper);
+  int pieceColor = color == 'b' ? Piece::Black : Piece::White;
+  return pieceType | pieceColor;
 }
