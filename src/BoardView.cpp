@@ -54,6 +54,8 @@ void BoardView::BeginBoard()
   for (int i = 0; i < 8; i++) {
     bool flag = false;
     for (int j = 0; j < 8; j++) {
+      const auto cellId = g.cellCursorPositions.size() - 1 - (j * 8ull + i);
+
       ImVec4 colorWhite{ 240.f / 256.f, 217.f / 256.f, 181.f / 256.f, 1 };
       ImVec4 colorBlack{ 181.f / 256.f, 136.f / 256.f, 99.f / 256.f, 1 };
       ImVec2 pieceStartCursorPos = {
@@ -61,8 +63,12 @@ void BoardView::BeginBoard()
         boardStart.y + static_cast<float>(j) * cellSize
       };
 
-      auto cellId = g.cellCursorPositions.size() - 1 - (j * 8ull + i);
       g.cellCursorPositions[cellId] = pieceStartCursorPos;
+
+      // Hide pieces while board is loading
+      if (g.appearanceK.back() < 0.99) {
+        g.cellCursorPositions[cellId].y = -1000;
+      }
 
       ImVec2 realCursorPos = pieceStartCursorPos;
       realCursorPos.x += (1 - g.appearanceK[cellId]) * cellSize / 2;

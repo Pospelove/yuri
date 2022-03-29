@@ -52,7 +52,7 @@ static LoadedPositionInfo PositionFromFen(std::string fen)
       rank--;
     } else {
       if (isdigit(symbol)) {
-        file += symbol;
+        file += symbol - '0';
       } else {
         int pieceColour =
           (toupper(symbol) == symbol) ? Piece::White : Piece::Black;
@@ -102,7 +102,10 @@ public:
     BackgroundWindowView::BeginWindow();
     BoardView::BeginBoard();
 
-    static auto pos = PositionFromFen("");
+    startFen =
+      "rnbqkb1r/pp2pppp/3p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 2 5";
+
+    static auto pos = PositionFromFen(startFen);
 
     for (size_t i = 0; i < pos.cells.size(); ++i) {
       auto piece = pos.cells[i];
