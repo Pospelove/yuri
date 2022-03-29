@@ -1,0 +1,22 @@
+{
+  "name": "yuri",
+  "version-string": "",
+  "description": "Yuri Chess Engine",
+  "dependencies": [
+    "sdl2",
+    "sdl2-ttf",
+    "sdl2-image",
+    "opengl",
+    "glad",
+    "lunasvg",
+    "stb",
+    {
+      "name": "imgui",
+      "features": [
+        "sdl2-binding",
+        "sdl2-renderer-binding",
+        "opengl3-binding"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+See https://github.com/lichess-org/lila/blob/master/COPYING.md
+
+public/piece/cburnett
+Colin M.L. Burnett
+GPLv2+
