@@ -4,6 +4,8 @@ set(VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_LIST_DIR}/overlay_ports")
 cmake_minimum_required(VERSION 3.23)
 project(yuri)
 
+set(CMAKE_CXX_STANDARD 17)
+
 include(cmake/CMakeRC.cmake)
 
 add_library(vcpkg_deps INTERFACE)
@@ -26,6 +28,7 @@ target_link_libraries(vcpkg_deps INTERFACE "$<IF:$<CONFIG:Debug>,${LUNASVG_LIBRA
 target_include_directories(vcpkg_deps INTERFACE ${LUNASVG_INCLUDE_DIR})
 
 find_path(STB_INCLUDE_DIR stb.h)
+find_library(LUNASVG_LIBRARY_DEBUG NAMES stb)
 target_include_directories(vcpkg_deps INTERFACE ${STB_INCLUDE_DIR})
 
 file(GLOB_RECURSE asset_sources assets/*)

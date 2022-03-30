@@ -4,20 +4,18 @@
 #include <vector>
 
 namespace {
+int GetCellId(int i, int j)
+{
+  return 64 - 1 - (j * 8ull + (8 - i - 1));
+}
+
+bool IsWhiteCell(int i, int j)
+{
+  return (i + j) % 2 == 0;
+}
+
 ImVec4 colorWhite{ 240.f / 256.f, 217.f / 256.f, 181.f / 256.f, 1 };
 ImVec4 colorBlack{ 181.f / 256.f, 136.f / 256.f, 99.f / 256.f, 1 };
-ImVec4 selectedColorWhite =
-  ImVec4{ 130.f / 256.f, 151.f / 256.f, 105.f / 256.f, 1.f };
-ImVec4 selectedColorBlack =
-  ImVec4{ 100.f / 256.f, 111.f / 256.f, 64.f / 256.f, 1.f };
-
-struct AvailableCellCircle
-{
-  ImVec2 center;
-  float radius = 0.f;
-  ImU32 color = static_cast<ImU32>(-1);
-  bool filled = true;
-};
 
 struct BoardViewData
 {
@@ -31,15 +29,17 @@ struct BoardViewData
   std::array<float, 64> appearanceK;
   ImVec2 nullPosition = { 0, 0 };
   int clickedCellId = -1;
-
-  std::vector<AvailableCellCircle> availableCellCircles;
+  float cellSize = 0.f;
+  std::vector<std::shared_ptr<BoardCellEffect>> effects;
 };
 static BoardViewData g;
 }
 
-void BoardView::BeginBoard(const std::set<int>& paintedCellIds,
-                           const std::map<int, bool>& targetedCellIds)
+void BoardView::BeginBoard(
+  const std::vector<std::shared_ptr<BoardCellEffect>>& effects)
 {
+  g.effects = effects;
+
   if (ImGui::Button("Reset")) {
     g.appearanceK.fill(0);
   }
@@ -55,13 +55,13 @@ void BoardView::BeginBoard(const std::set<int>& paintedCellIds,
   float minWindowSize =
     std::min(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
   minWindowSize *= 0.8f;
-  auto cellSize = minWindowSize / 8;
+  g.cellSize = minWindowSize / 8;
 
   ImVec2 displayCenter = ImGui::GetIO().DisplaySize;
   displayCenter.x /= 2;
   displayCenter.y /= 2;
 
-  ImVec2 boardSizePrediction = { cellSize * 8, cellSize * 8 };
+  ImVec2 boardSizePrediction = { g.cellSize * 8, g.cellSize * 8 };
 
   ImVec2 boardStart = displayCenter;
   boardStart.x -= boardSizePrediction.x / 2;
@@ -69,14 +69,14 @@ void BoardView::BeginBoard(const std::set<int>& paintedCellIds,
 
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
-      DrawCell(i, j, boardStart, cellSize, paintedCellIds, targetedCellIds);
+      DrawCell(i, j, boardStart);
     }
   }
 }
 
 void BoardView::EndBoard()
 {
-  g.clickedCellId = -1;
+  /* g.clickedCellId = -1;
   for (auto& circleInfo : g.availableCellCircles) {
     if (circleInfo.filled) {
       ImGui::GetForegroundDrawList()->AddCircleFilled(
@@ -87,7 +87,17 @@ void BoardView::EndBoard()
         circleInfo.radius * 0.1f);
     }
   }
-  g.availableCellCircles.clear();
+  g.availableCellCircles.clear();*/
+
+  for (auto& effect : g.effects) {
+    for (int i = 0; i < 8; i++) {
+      for (int j = 0; j < 8; j++) {
+        int cellId = GetCellId(i, j);
+        effect->OnEndBoard(cellId, g.cellCursorPositions[cellId], g.cellSize,
+                           IsWhiteCell(i, j));
+      }
+    }
+  }
 }
 
 const ImVec2& BoardView::GetCellCursorPos(int cell)
@@ -121,16 +131,13 @@ void BoardView::RecalculateAppearanceK()
   }
 }
 
-void BoardView::DrawCell(int i, int j, ImVec2 boardStart, float cellSize,
-                         const std::set<int>& paintedCellIds,
-                         const std::map<int, bool>& targetedCellIds)
+void BoardView::DrawCell(int i, int j, ImVec2 boardStart)
 {
-  const auto cellId =
-    g.cellCursorPositions.size() - 1 - (j * 8ull + (8 - i - 1));
+  const auto cellId = GetCellId(i, j);
 
   ImVec2 pieceStartCursorPos = {
-    boardStart.x + static_cast<float>(i) * cellSize,
-    boardStart.y + static_cast<float>(j) * cellSize
+    boardStart.x + static_cast<float>(i) * g.cellSize,
+    boardStart.y + static_cast<float>(j) * g.cellSize
   };
 
   g.cellCursorPositions[cellId] = pieceStartCursorPos;
@@ -141,25 +148,39 @@ void BoardView::DrawCell(int i, int j, ImVec2 boardStart, float cellSize,
   }
 
   ImVec2 realCursorPos = pieceStartCursorPos;
-  realCursorPos.x += (1 - g.appearanceK[cellId]) * cellSize / 2;
-  realCursorPos.y += (1 - g.appearanceK[cellId]) * cellSize / 2;
+  realCursorPos.x += (1 - g.appearanceK[cellId]) * g.cellSize / 2;
+  realCursorPos.y += (1 - g.appearanceK[cellId]) * g.cellSize / 2;
 
   ImGui::SetCursorPos(realCursorPos);
 
-  bool isWhiteCell = ((i + j) % 2 == 0);
+  bool isWhiteCell = IsWhiteCell(i, j);
   ImVec4 color = isWhiteCell ? colorWhite : colorBlack;
-  if (paintedCellIds.count(static_cast<int>(cellId))) {
-    color = isWhiteCell ? selectedColorWhite : selectedColorBlack;
+  for (auto& effect : g.effects) {
+    if (auto effectColor = effect->GetCellColor(
+          cellId, isWhiteCell, BoardCellEffect::CellState::Patient)) {
+      color = *effectColor;
+      break;
+    }
   }
   ImVec4 colorActive = color;
+  for (auto& effect : g.effects) {
+    if (auto effectColor = effect->GetCellColor(
+          cellId, isWhiteCell, BoardCellEffect::CellState::Clicked)) {
+      colorActive = *effectColor;
+      break;
+    }
+  }
   ImVec4 colorHovered = color;
-  if (targetedCellIds.count(static_cast<int>(cellId))) {
-    colorActive = colorHovered =
-      isWhiteCell ? selectedColorWhite : selectedColorBlack;
+  for (auto& effect : g.effects) {
+    if (auto effectColor = effect->GetCellColor(
+          cellId, isWhiteCell, BoardCellEffect::CellState::Hovered)) {
+      colorHovered = *effectColor;
+      break;
+    }
   }
 
-  ImVec2 buttonSize = { cellSize * g.appearanceK[cellId],
-                        cellSize * g.appearanceK[cellId] };
+  ImVec2 buttonSize = { g.cellSize * g.appearanceK[cellId],
+                        g.cellSize * g.appearanceK[cellId] };
 
   if (buttonSize.x > 1) {
     ImGui::PushStyleColor(ImGuiCol_Button, color);
@@ -174,7 +195,7 @@ void BoardView::DrawCell(int i, int j, ImVec2 boardStart, float cellSize,
     sprintf(buf, "", static_cast<int>(cellId));
     ImGui::GetForegroundDrawList()->AddText(realCursorPos, -1, buf);
 
-    if (targetedCellIds.count(static_cast<int>(cellId))) {
+    /* if (targetedCellIds.count(static_cast<int>(cellId))) {
       ImVec2 center = realCursorPos;
       center.x += cellSize / 2;
       center.y += cellSize / 2;
@@ -196,7 +217,7 @@ void BoardView::DrawCell(int i, int j, ImVec2 boardStart, float cellSize,
         g.availableCellCircles.back().radius = cellSize * 0.125f;
         g.availableCellCircles.back().color = color32;
       }
-    }
+    }*/
   }
 }
 
