@@ -6,7 +6,7 @@ project(yuri)
 
 set(CMAKE_CXX_STANDARD 17)
 
-include(cmake/CMakeRC.cmake)
+find_package(CMakeRC REQUIRED)
 
 add_library(vcpkg_deps INTERFACE)
 

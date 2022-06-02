@@ -10,6 +10,7 @@
     "glad",
     "lunasvg",
     "stb",
+    "cmakerc",
     {
       "name": "imgui",
       "features": [
