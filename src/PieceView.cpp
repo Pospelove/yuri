@@ -25,11 +25,11 @@ struct PieceViewData
 static PieceViewData g;
 }
 
-void PieceView::BeginPiece(int piece, const ImVec2& cursorPos)
+void PieceView::BeginPiece(int piece, const ImVec2& cursorPos, float scale)
 {
   float minWindowSize =
     std::min(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
-  minWindowSize *= 0.8f;
+  minWindowSize *= scale;
   auto cellSize = minWindowSize / 8;
 
   if (cellSize != g.lastCellSize) {

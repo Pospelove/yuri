@@ -24,15 +24,16 @@ public:
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     BackgroundWindowView::BeginWindow();
-    BoardView::BeginBoard(effects);
+    BoardView::BeginBoard(effects, scale);
 
-    static auto pos = FenUtils::PositionFromFen(FenUtils::StartFen);
+    static LoadedPositionInfo pos =
+      FenUtils::PositionFromFen(FenUtils::StartFen);
 
     for (size_t i = 0; i < pos.cells.size(); ++i) {
       auto piece = pos.cells[i];
       if (piece) {
         auto p = BoardView::GetCellCursorPos(i);
-        PieceView::BeginPiece(piece, p);
+        PieceView::BeginPiece(piece, p, scale);
         PieceView::EndPiece();
       }
     }
@@ -54,6 +55,7 @@ public:
 
 private:
   std::vector<std::shared_ptr<BoardCellEffect>> effects;
+  float scale = 1.0f;
 };
 
 int main(int argc, char* argv[])

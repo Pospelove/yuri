@@ -4,7 +4,7 @@
 class PieceView
 {
 public:
-  static void BeginPiece(int piece, const ImVec2& cursorPos);
+  static void BeginPiece(int piece, const ImVec2& cursorPos, float scale);
   static void EndPiece();
 
 private:

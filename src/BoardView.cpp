@@ -22,10 +22,12 @@ struct BoardViewData
   BoardViewData()
   {
     cellCursorPositions.fill({ 0, 0 });
+    cellCursorPositionsScrollOffsetIncluded.fill({ 0, 0 });
     appearanceK.fill(0.f);
   }
 
-  std::array<ImVec2, 64> cellCursorPositions;
+  std::array<ImVec2, 64> cellCursorPositions,
+    cellCursorPositionsScrollOffsetIncluded;
   std::array<float, 64> appearanceK;
   ImVec2 nullPosition = { 0, 0 };
   int clickedCellId = -1;
@@ -36,7 +38,7 @@ static BoardViewData g;
 }
 
 void BoardView::BeginBoard(
-  const std::vector<std::shared_ptr<BoardCellEffect>>& effects)
+  const std::vector<std::shared_ptr<BoardCellEffect>>& effects, float& scale)
 {
   g.effects = effects;
 
@@ -50,11 +52,15 @@ void BoardView::BeginBoard(
     g.appearanceK.fill(1);
   }
 
+  ImGui::SetNextItemWidth(100);
+  ImGui::SliderFloat("Scale", &scale, 0.1f, 2.f);
+
   RecalculateAppearanceK();
 
   float minWindowSize =
     std::min(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
-  minWindowSize *= 0.8f;
+  minWindowSize *= scale;
+
   g.cellSize = minWindowSize / 8;
 
   ImVec2 displayCenter = ImGui::GetIO().DisplaySize;
@@ -93,7 +99,7 @@ void BoardView::EndBoard()
     for (int i = 0; i < 8; i++) {
       for (int j = 0; j < 8; j++) {
         int cellId = GetCellId(i, j);
-        effect->OnEndBoard(cellId, g.cellCursorPositions[cellId], g.cellSize,
+        effect->OnEndBoard(cellId, GetCellCursorPos(cellId), g.cellSize,
                            IsWhiteCell(i, j));
       }
     }
@@ -105,7 +111,14 @@ const ImVec2& BoardView::GetCellCursorPos(int cell)
   if (cell < 0 || static_cast<int>(g.cellCursorPositions.size()) <= cell) {
     return g.nullPosition;
   }
-  return g.cellCursorPositions[cell];
+
+  float scrollOffset = ImGui::GetScrollY();
+
+  g.cellCursorPositionsScrollOffsetIncluded[cell] =
+    g.cellCursorPositions[cell];
+  g.cellCursorPositionsScrollOffsetIncluded[cell].y -= scrollOffset;
+
+  return g.cellCursorPositionsScrollOffsetIncluded[cell];
 }
 
 int BoardView::GetClickedCell()
