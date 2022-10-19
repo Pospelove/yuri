@@ -11,8 +11,12 @@ class BoardView
 {
 public:
   static void BeginBoard(
-    const std::vector<std::shared_ptr<BoardCellEffect>>& effects, float &scale);
+    const std::vector<std::shared_ptr<BoardCellEffect>>& effects,
+    float& scale);
   static void EndBoard();
+
+  static void BeginSettings(float& scale);
+  static void EndSettings();
 
   static const ImVec2& GetCellCursorPos(int cell);
   static int GetClickedCell();

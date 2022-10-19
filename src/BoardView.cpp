@@ -42,19 +42,6 @@ void BoardView::BeginBoard(
 {
   g.effects = effects;
 
-  if (ImGui::Button("Reset")) {
-    g.appearanceK.fill(0);
-  }
-
-  static bool enableAnimation = true;
-  ImGui::Checkbox("Animation", &enableAnimation);
-  if (!enableAnimation) {
-    g.appearanceK.fill(1);
-  }
-
-  ImGui::SetNextItemWidth(100);
-  ImGui::SliderFloat("Scale", &scale, 0.1f, 2.f);
-
   RecalculateAppearanceK();
 
   float minWindowSize =
@@ -104,6 +91,26 @@ void BoardView::EndBoard()
       }
     }
   }
+}
+
+void BoardView::BeginSettings(float& scale)
+{
+  if (ImGui::Button("Reset")) {
+    g.appearanceK.fill(0);
+  }
+
+  static bool enableAnimation = true;
+  ImGui::Checkbox("Animation", &enableAnimation);
+  if (!enableAnimation) {
+    g.appearanceK.fill(1);
+  }
+
+  ImGui::SetNextItemWidth(100);
+  ImGui::SliderFloat("Scale", &scale, 0.0f, 2.f);
+}
+
+void BoardView::EndSettings()
+{
 }
 
 const ImVec2& BoardView::GetCellCursorPos(int cell)

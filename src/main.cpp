@@ -23,6 +23,12 @@ public:
   {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
+    ImGui::Begin("Settings");
+    BoardView::BeginSettings(scale);
+    BoardView::EndSettings();
+    ImGui::SetWindowFocus();
+    ImGui::End();
+
     BackgroundWindowView::BeginWindow();
     BoardView::BeginBoard(effects, scale);
 
@@ -55,7 +61,7 @@ public:
 
 private:
   std::vector<std::shared_ptr<BoardCellEffect>> effects;
-  float scale = 1.0f;
+  float scale = 0.8f;
 };
 
 int main(int argc, char* argv[])
