@@ -24,7 +24,7 @@ public:
     auto color = isWhiteCell ? selectedColorWhite : selectedColorBlack;
     auto color32 = ImGui::ColorConvertFloat4ToU32(color);
     auto radius = cellSize * 0.125f;
-    ImGui::GetForegroundDrawList()->AddCircleFilled(center, radius, color32);
+    ImGui::GetWindowDrawList()->AddCircleFilled(center, radius, color32);
   }
 
   std::optional<ImVec4> GetCellColor(int cellId, bool isWhiteCell,

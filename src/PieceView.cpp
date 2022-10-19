@@ -49,8 +49,8 @@ void PieceView::BeginPiece(int piece, const ImVec2& cursorPos, float scale)
   pos2.x += g.lastCellSize;
   pos2.y += g.lastCellSize;
 
-  ImGui::GetForegroundDrawList()->AddImage(reinterpret_cast<void*>(texture),
-                                           cursorPos, pos2);
+  ImGui::GetWindowDrawList()->AddImage(reinterpret_cast<void*>(texture),
+                                       cursorPos, pos2);
 }
 
 void PieceView::EndPiece()
