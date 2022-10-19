@@ -14,11 +14,20 @@ bool IsWhiteCell(int i, int j)
   return (i + j) % 2 == 0;
 }
 
-//ImVec4 colorWhite{ 240.f / 256.f, 217.f / 256.f, 181.f / 256.f, 1 };
-//ImVec4 colorBlack{ 181.f / 256.f, 136.f / 256.f, 99.f / 256.f, 1 };
+struct
+{
+  ImVec4 colorWhite{ 240.f / 256.f, 217.f / 256.f, 181.f / 256.f, 1 };
+  ImVec4 colorBlack{ 181.f / 256.f, 136.f / 256.f, 99.f / 256.f, 1 };
+} lichessTheme;
 
-ImVec4 colorWhite{ 0xB2 / 256.f, 0xD3 / 256.f, 0xB5 / 256.f, 1 };
-ImVec4 colorBlack{ 0x5A / 256.f, 0x8D / 256.f, 0x60 / 256.f, 1 };
+struct
+{
+  ImVec4 colorWhite{ 0xB2 / 256.f, 0xD3 / 256.f, 0xB5 / 256.f, 1 };
+  ImVec4 colorBlack{ 0x5A / 256.f, 0x8D / 256.f, 0x60 / 256.f, 1 };
+} darkwoodTheme;
+
+ImVec4* colorWhite = nullptr;
+ImVec4* colorBlack = nullptr;
 
 struct BoardViewData
 {
@@ -98,11 +107,13 @@ void BoardView::EndBoard()
 
 void BoardView::BeginSettings(float& scale)
 {
+  static bool enableAnimation = true;
+  static bool enableDarkwoodTheme = false;
+
   if (ImGui::Button("Reset")) {
     g.appearanceK.fill(0);
   }
 
-  static bool enableAnimation = true;
   ImGui::Checkbox("Animation", &enableAnimation);
   if (!enableAnimation) {
     g.appearanceK.fill(1);
@@ -110,6 +121,15 @@ void BoardView::BeginSettings(float& scale)
 
   ImGui::SetNextItemWidth(100);
   ImGui::SliderFloat("Scale", &scale, 0.0f, 2.f);
+
+  ImGui::Checkbox("Darkwood theme", &enableDarkwoodTheme);
+  if (enableDarkwoodTheme) {
+    colorWhite = &darkwoodTheme.colorWhite;
+    colorBlack = &darkwoodTheme.colorBlack;
+  } else {
+    colorWhite = &lichessTheme.colorWhite;
+    colorBlack = &lichessTheme.colorBlack;
+  }
 }
 
 void BoardView::EndSettings()
@@ -156,6 +176,11 @@ void BoardView::RecalculateAppearanceK()
 
 void BoardView::DrawCell(int i, int j, ImVec2 boardStart)
 {
+  if (colorWhite == nullptr) {
+    colorWhite = &lichessTheme.colorWhite;
+    colorBlack = &lichessTheme.colorBlack;
+  }
+
   const auto cellId = GetCellId(i, j);
 
   ImVec2 pieceStartCursorPos = {
@@ -177,7 +202,7 @@ void BoardView::DrawCell(int i, int j, ImVec2 boardStart)
   ImGui::SetCursorPos(realCursorPos);
 
   bool isWhiteCell = IsWhiteCell(i, j);
-  ImVec4 color = isWhiteCell ? colorWhite : colorBlack;
+  ImVec4 color = isWhiteCell ? *colorWhite : *colorBlack;
   for (auto& effect : g.effects) {
     if (auto effectColor = effect->GetCellColor(
           cellId, isWhiteCell, BoardCellEffect::CellState::Patient)) {
