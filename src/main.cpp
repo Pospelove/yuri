@@ -23,11 +23,16 @@ public:
   {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
+    ImVec4 c = ImGui::GetStyleColorVec4(ImGuiCol_TitleBgActive);
+    ImGui::PushStyleColor(ImGuiCol_TitleBg, c);
     ImGui::Begin("Settings");
     BoardView::BeginSettings(scale);
     BoardView::EndSettings();
-    ImGui::SetWindowFocus();
+    if (ImGui::IsMouseReleased(0)) {
+      ImGui::SetWindowFocus();
+    }
     ImGui::End();
+    ImGui::PopStyleColor();
 
     BackgroundWindowView::BeginWindow();
     BoardView::BeginBoard(effects, scale);
