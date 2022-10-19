@@ -14,8 +14,11 @@ bool IsWhiteCell(int i, int j)
   return (i + j) % 2 == 0;
 }
 
-ImVec4 colorWhite{ 240.f / 256.f, 217.f / 256.f, 181.f / 256.f, 1 };
-ImVec4 colorBlack{ 181.f / 256.f, 136.f / 256.f, 99.f / 256.f, 1 };
+//ImVec4 colorWhite{ 240.f / 256.f, 217.f / 256.f, 181.f / 256.f, 1 };
+//ImVec4 colorBlack{ 181.f / 256.f, 136.f / 256.f, 99.f / 256.f, 1 };
+
+ImVec4 colorWhite{ 0xB2 / 256.f, 0xD3 / 256.f, 0xB5 / 256.f, 1 };
+ImVec4 colorBlack{ 0x5A / 256.f, 0x8D / 256.f, 0x60 / 256.f, 1 };
 
 struct BoardViewData
 {
